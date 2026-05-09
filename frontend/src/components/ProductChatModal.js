@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRealtime } from "@/context/RealtimeContext";
 
 function getConversationId(productId, userA, userB) {
@@ -27,18 +27,20 @@ export default function ProductChatModal({ product, currentUser, onClose }) {
   const listRef = useRef(null);
   const status = connectionStatus === "idle" ? "connecting" : connectionStatus;
 
+  const productId = product?._id;
   const ownerId = product?.owner?._id || product?.owner;
-  const conversationId = useMemo(() => {
-    if (!product?._id || !currentUser?._id || !ownerId) return "";
-    return getConversationId(product._id, currentUser._id, ownerId);
-  }, [currentUser?._id, ownerId, product?._id]);
+  const currentUserId = currentUser?._id;
+  const conversationId =
+    productId && currentUserId && ownerId
+      ? getConversationId(productId, currentUserId, ownerId)
+      : "";
 
   useEffect(() => {
-    if (!conversationId || !currentUser?._id) return;
+    if (!conversationId || !currentUserId) return;
 
     joinConversation({
       conversationId,
-      userId: currentUser._id,
+      userId: currentUserId,
     });
 
     function handleMessage(message) {
@@ -69,7 +71,7 @@ export default function ProductChatModal({ product, currentUser, onClose }) {
       unsubscribeMessage();
       unsubscribeError();
     };
-  }, [conversationId, currentUser?._id, joinConversation, receiveMessage, receiveMessageError]);
+  }, [conversationId, currentUserId, joinConversation, receiveMessage, receiveMessageError]);
 
   useEffect(() => {
     listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: "smooth" });
@@ -78,12 +80,12 @@ export default function ProductChatModal({ product, currentUser, onClose }) {
   function sendMessage(event) {
     event.preventDefault();
     const messageText = text.trim();
-    if (!messageText || !conversationId || !currentUser?._id || !ownerId) return;
+    if (!messageText || !conversationId || !currentUserId || !ownerId) return;
 
     sendRealtimeMessage({
       conversationId,
-      productId: product._id,
-      from: currentUser._id,
+      productId,
+      from: currentUserId,
       fromName: currentUser.name,
       to: ownerId,
       text: messageText,

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import api from "@/services/api";
@@ -10,6 +10,33 @@ import ProductChatModal from "@/components/ProductChatModal";
 import { useNotifications } from "@/context/NotificationContext";
 
 const INR = "\u20b9";
+const AUTH_CHANGE_EVENT = "auth-change";
+
+function getStoredUserSnapshot() {
+  if (typeof window === "undefined") return "";
+
+  return localStorage.getItem("user") || "";
+}
+
+function parseStoredUser(snapshot) {
+  if (!snapshot) return null;
+
+  try {
+    return JSON.parse(snapshot);
+  } catch {
+    return null;
+  }
+}
+
+function subscribeToAuthChanges(callback) {
+  window.addEventListener("storage", callback);
+  window.addEventListener(AUTH_CHANGE_EVENT, callback);
+
+  return () => {
+    window.removeEventListener("storage", callback);
+    window.removeEventListener(AUTH_CHANGE_EVENT, callback);
+  };
+}
 
 function formatCurrency(value, fallback = "N/A") {
   const number = Number(value);
@@ -33,16 +60,18 @@ export default function ProductDetailPage() {
   const [rentalError, setRentalError] = useState("");
   const [toast, setToast] = useState(null);
   const [daysLeft, setDaysLeft] = useState(null);
-  const [currentUser, setCurrentUser] = useState(null);
+  const currentUserSnapshot = useSyncExternalStore(
+    subscribeToAuthChanges,
+    getStoredUserSnapshot,
+    () => ""
+  );
+  const currentUser = useMemo(
+    () => parseStoredUser(currentUserSnapshot),
+    [currentUserSnapshot]
+  );
   const [showChat, setShowChat] = useState(false);
 
   useEffect(() => {
-    try {
-      setCurrentUser(JSON.parse(localStorage.getItem("user") || "null"));
-    } catch {
-      setCurrentUser(null);
-    }
-
     async function fetchProduct() {
       try {
         const res = await api.get(`/products/${id}`);
@@ -286,7 +315,11 @@ export default function ProductDetailPage() {
                     )}
                   </div>
                 </div>
-                {!isOwner && (
+                {isOwner ? (
+                  <div className="mt-4 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-center text-sm font-semibold text-slate-400">
+                    This is your listing
+                  </div>
+                ) : (
                   <button
                     type="button"
                     onClick={handleMessageSeller}

@@ -53,11 +53,13 @@ export default function AddProductPage() {
   // ✨ AI Description
   async function generateDescription() {
     if (!form.title.trim()) return alert("Enter title first");
+    if (!form.category) return alert("Select category first");
     setAiDescLoading(true);
 
     try {
       const res = await api.post("/ai/generate-description", {
         title: form.title,
+        category: form.category,
       });
       const desc =
         res.data.description || res.data.data || res.data.result || "";
@@ -73,6 +75,7 @@ export default function AddProductPage() {
   // 💡 AI Price
   async function suggestPrice() {
     if (!form.title.trim()) return alert("Enter title first");
+    if (!form.category) return alert("Select category first");
     setAiPriceLoading(true);
 
     try {
@@ -82,12 +85,20 @@ export default function AddProductPage() {
       });
 
       const price =
+        res.data.suggestedPrice ||
         res.data.price ||
         res.data.data?.price ||
         res.data.recommendedPrice ||
         "";
+      const rentPrice = res.data.rentPerDay || res.data.rentPrice || res.data.data?.rentPerDay || "";
+      const deposit = res.data.deposit || res.data.data?.deposit || "";
 
-      setForm((prev) => ({ ...prev, price: String(price) }));
+      setForm((prev) => ({
+        ...prev,
+        price: price ? String(price) : prev.price,
+        rentPrice: rentPrice ? String(rentPrice) : prev.rentPrice,
+        deposit: deposit ? String(deposit) : prev.deposit,
+      }));
     } catch {
       alert("Price suggestion failed");
     } finally {
@@ -178,8 +189,8 @@ export default function AddProductPage() {
             <div>
               <div className="flex justify-between mb-1">
                 <label>Description</label>
-                <button type="button" onClick={generateDescription}>
-                  ✨ Generate
+                <button type="button" onClick={generateDescription} disabled={aiDescLoading}>
+                  {aiDescLoading ? "Generating..." : "Generate"}
                 </button>
               </div>
 
@@ -235,8 +246,8 @@ export default function AddProductPage() {
                 placeholder="Price"
                 className="flex-1 px-4 py-3 border rounded-xl"
               />
-              <button type="button" onClick={suggestPrice}>
-                💡
+              <button type="button" onClick={suggestPrice} disabled={aiPriceLoading}>
+                {aiPriceLoading ? "..." : "Suggest"}
               </button>
             </div>
 

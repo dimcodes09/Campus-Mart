@@ -15,6 +15,9 @@ const authRoutes = require("./routes/auth");
 const productRoutes = require("./routes/products");
 const rentalRoutes = require("./routes/rentals");
 
+// ✅ AI Routes
+const aiRoutes = require("./ai/aiRoutes");
+
 // Connect to MongoDB
 connectDB();
 
@@ -29,6 +32,10 @@ app.use(express.urlencoded({ extended: false }));
 app.use("/api/auth", authRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/rentals", rentalRoutes);
+
+// AI routes. Keep /ai for compatibility and /api/ai for the frontend api client.
+app.use("/api/ai", aiRoutes);
+app.use("/ai", aiRoutes);
 
 // Health check
 app.get("/api/health", (req, res) => {

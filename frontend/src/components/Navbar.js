@@ -1,24 +1,41 @@
 "use client";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import NotificationBell from "@/components/NotificationBell";
+
+const AUTH_CHANGE_EVENT = "auth-change";
+
+function hasStoredToken() {
+  if (typeof window === "undefined") return false;
+  return !!localStorage.getItem("token");
+}
+
+function subscribeToAuthChanges(callback) {
+  window.addEventListener("storage", callback);
+  window.addEventListener(AUTH_CHANGE_EVENT, callback);
+
+  return () => {
+    window.removeEventListener("storage", callback);
+    window.removeEventListener(AUTH_CHANGE_EVENT, callback);
+  };
+}
 
 export default function Navbar() {
   const router = useRouter();
   const pathname = usePathname();
 
-  const [loggedIn, setLoggedIn] = useState(false);
+  const loggedIn = useSyncExternalStore(
+    subscribeToAuthChanges,
+    hasStoredToken,
+    () => false
+  );
   const [menuOpen, setMenuOpen] = useState(false);
-
-  useEffect(() => {
-    setLoggedIn(!!localStorage.getItem("token"));
-  }, [pathname]);
 
   function handleLogout() {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
-    setLoggedIn(false);
+    window.dispatchEvent(new Event(AUTH_CHANGE_EVENT));
     router.push("/login");
   }
 

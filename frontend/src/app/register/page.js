@@ -25,6 +25,7 @@ export default function RegisterPage() {
       const user = res.data.user || res.data.data?.user;
       localStorage.setItem("token", token);
       if (user) localStorage.setItem("user", JSON.stringify(user));
+      window.dispatchEvent(new Event("auth-change"));
       router.push("/");
     } catch (err) {
       setError(err.response?.data?.message || "Registration failed. Try again.");

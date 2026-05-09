@@ -20,9 +20,13 @@ export default function SocketChatInbox() {
   useEffect(() => {
     if (currentUser?._id) return;
 
-    setConversations({});
-    setActiveId("");
-    setOpen(false);
+    const resetId = window.setTimeout(() => {
+      setConversations({});
+      setActiveId("");
+      setOpen(false);
+    }, 0);
+
+    return () => window.clearTimeout(resetId);
   }, [currentUser?._id]);
 
   useEffect(() => {

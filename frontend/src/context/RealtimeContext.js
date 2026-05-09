@@ -39,16 +39,19 @@ export function RealtimeProvider({ children }) {
   }, []);
 
   useEffect(() => {
-    refreshCurrentUser();
+    const refreshId = window.setTimeout(refreshCurrentUser, 0);
+    return () => window.clearTimeout(refreshId);
   }, [pathname, refreshCurrentUser]);
 
   useEffect(() => {
     window.addEventListener("focus", refreshCurrentUser);
     window.addEventListener("storage", refreshCurrentUser);
+    window.addEventListener("auth-change", refreshCurrentUser);
 
     return () => {
       window.removeEventListener("focus", refreshCurrentUser);
       window.removeEventListener("storage", refreshCurrentUser);
+      window.removeEventListener("auth-change", refreshCurrentUser);
     };
   }, [refreshCurrentUser]);
 
@@ -57,10 +60,14 @@ export function RealtimeProvider({ children }) {
 
     if (!currentUserId) {
       joinedConversationsRef.current.clear();
-      setConnectionStatus("idle");
-      setOnlineUsers([]);
       disconnectSocket();
-      return;
+
+      const resetId = window.setTimeout(() => {
+        setConnectionStatus("idle");
+        setOnlineUsers([]);
+      }, 0);
+
+      return () => window.clearTimeout(resetId);
     }
 
     function handleConnect() {
@@ -102,14 +109,22 @@ export function RealtimeProvider({ children }) {
     socket.on("receive_message", handleMessage);
     socket.on("message_error", handleMessageError);
 
+    let connectingId;
+
     if (socket.connected) {
       handleConnect();
     } else {
-      setConnectionStatus("connecting");
+      connectingId = window.setTimeout(() => {
+        setConnectionStatus("connecting");
+      }, 0);
       connectSocket();
     }
 
     return () => {
+      if (connectingId) {
+        window.clearTimeout(connectingId);
+      }
+
       socket.off("connect", handleConnect);
       socket.off("disconnect", handleDisconnect);
       socket.off("connect_error", handleConnectError);
