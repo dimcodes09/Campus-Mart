@@ -7,6 +7,11 @@ const { emitToUser } = require("../socket");
 // @access Private
 const createRental = async (req, res, next) => {
   try {
+
+    // ✅ ADDED (as asked)
+    if (!req.user.isVerified)
+      return res.status(403).json({ message: "Only verified students can perform this action" });
+
     const { productId, startDate, endDate } = req.body;
 
     const product = await Product.findById(productId);
@@ -66,7 +71,6 @@ const confirmRental = async (req, res, next) => {
       return res.status(403).json({ success: false, message: "Only the product owner can confirm a rental." });
     }
 
-    // Atomically update both rental and product
     rental.status = "active";
     product.status = "rented";
     await Promise.all([rental.save(), product.save()]);
@@ -99,7 +103,6 @@ const returnRental = async (req, res, next) => {
       return res.status(403).json({ success: false, message: "Not authorized to complete this rental." });
     }
 
-    // Mark rental complete, free up the product
     rental.status = "completed";
     rental.productId.status = "available";
     await Promise.all([rental.save(), rental.productId.save()]);

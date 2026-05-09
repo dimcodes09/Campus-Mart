@@ -63,4 +63,38 @@ const getMe = async (req, res) => {
   res.status(200).json({ success: true, user: req.user });
 };
 
-module.exports = { register, login, getMe };
+const verifyStudent = async (req, res) => {
+  try {
+    const { studentIdImage } = req.body;
+    if (!studentIdImage) {
+      return res.status(400).json({ success: false, message: "Image is required." });
+    }
+
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found." });
+    }
+
+    if (user.isVerified) {
+      return res.status(400).json({ success: false, message: "Student is already verified." });
+    }
+
+    user.studentIdImage = studentIdImage;
+    user.isVerified = false;
+    user.verificationStatus = "pending";
+    user.verificationReviewedAt = null;
+    await user.save();
+
+    user.password = undefined;
+
+    res.json({
+      success: true,
+      message: "Verification request submitted for admin review.",
+      user,
+    });
+  } catch {
+    res.status(500).json({ success: false, message: "Verification failed." });
+  }
+};
+
+module.exports = { register, login, getMe, verifyStudent };

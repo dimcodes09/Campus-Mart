@@ -25,6 +25,13 @@ const rentalSchema = new mongoose.Schema(
       required: [true, "Deposit amount is required"],
       min: [0, "Deposit cannot be negative"],
     },
+    // In your existing Rental schema, add:
+agreementText: { 
+  type: String, default: "" 
+},
+agreementId:   { 
+  type: String, default: ""
+ },
     status: {
       type: String,
       enum: ["pending", "active", "completed", "cancelled"],

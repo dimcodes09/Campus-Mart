@@ -22,9 +22,27 @@ const userSchema = new mongoose.Schema(
       minlength: [6, "Password must be at least 6 characters"],
       select: false,
     },
+    role: {
+      type: String,
+      enum: ["user", "admin"],
+      default: "user",
+    },
     isVerified: {
       type: Boolean,
       default: false,
+    },
+    verificationStatus: {
+      type: String,
+      enum: ["none", "pending", "approved", "rejected"],
+      default: "none",
+    },
+    verificationReviewedAt: {
+      type: Date,
+      default: null,
+    },
+    studentIdImage: {
+      type: String,
+      default: "",
     },
     rating: {
       type: Number,

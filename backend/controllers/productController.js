@@ -4,6 +4,11 @@ const Product = require("../models/Product");
 // @access Private
 const createProduct = async (req, res, next) => {
   try {
+
+    // ✅ ADDED (as asked)
+    if (!req.user.isVerified)
+      return res.status(403).json({ message: "Only verified students can perform this action" });
+
     const { title, description, imageUrl, reelVideoUrl, price, rentPrice, deposit, category } = req.body;
 
     const product = await Product.create({

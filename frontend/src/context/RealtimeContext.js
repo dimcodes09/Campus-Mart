@@ -33,6 +33,7 @@ export function RealtimeProvider({ children }) {
   const messageHandlersRef = useRef(new Set());
   const messageErrorHandlersRef = useRef(new Set());
   const joinedConversationsRef = useRef(new Map());
+  const lastConnectionErrorRef = useRef("");
 
   const refreshCurrentUser = useCallback(() => {
     setCurrentUser(getStoredUser());
@@ -71,6 +72,7 @@ export function RealtimeProvider({ children }) {
     }
 
     function handleConnect() {
+      lastConnectionErrorRef.current = "";
       setConnectionStatus("connected");
       socket.emit("register", currentUserId);
 
@@ -86,7 +88,12 @@ export function RealtimeProvider({ children }) {
 
     function handleConnectError(error) {
       setConnectionStatus("error");
-      console.error("[Socket] Connection error:", error.message);
+
+      const message = error?.message || "Unable to connect to realtime server.";
+      if (lastConnectionErrorRef.current !== message) {
+        lastConnectionErrorRef.current = message;
+        console.warn("[Socket] Realtime connection unavailable:", message);
+      }
     }
 
     function handleOnlineUsers(users = []) {

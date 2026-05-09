@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
-import { useState, useSyncExternalStore } from "react";
+import { useMemo, useState, useSyncExternalStore } from "react";
 import NotificationBell from "@/components/NotificationBell";
 
 const AUTH_CHANGE_EVENT = "auth-change";
@@ -9,6 +9,11 @@ const AUTH_CHANGE_EVENT = "auth-change";
 function hasStoredToken() {
   if (typeof window === "undefined") return false;
   return !!localStorage.getItem("token");
+}
+
+function getStoredUser() {
+  if (typeof window === "undefined") return "";
+  return localStorage.getItem("user") || "";
 }
 
 function subscribeToAuthChanges(callback) {
@@ -24,13 +29,27 @@ function subscribeToAuthChanges(callback) {
 export default function Navbar() {
   const router = useRouter();
   const pathname = usePathname();
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const loggedIn = useSyncExternalStore(
     subscribeToAuthChanges,
     hasStoredToken,
     () => false
   );
-  const [menuOpen, setMenuOpen] = useState(false);
+  const userSnapshot = useSyncExternalStore(
+    subscribeToAuthChanges,
+    getStoredUser,
+    () => ""
+  );
+  const user = useMemo(() => {
+    if (!userSnapshot) return null;
+
+    try {
+      return JSON.parse(userSnapshot);
+    } catch {
+      return null;
+    }
+  }, [userSnapshot]);
 
   function handleLogout() {
     localStorage.removeItem("token");
@@ -39,7 +58,6 @@ export default function Navbar() {
     router.push("/login");
   }
 
-  // Hide navbar on reels page
   if (pathname === "/reels") return null;
 
   const linkClass = (href) =>
@@ -49,14 +67,22 @@ export default function Navbar() {
         : "text-slate-600 hover:text-indigo-600 hover:bg-indigo-50"
     }`;
 
+  const verificationStatus = () => {
+    if (!user) return null;
+    if (user.isVerified || user.verificationStatus === "approved") {
+      return <span className="text-green-500 text-sm">Verified Student</span>;
+    }
+    if (user.verificationStatus === "pending") {
+      return <span className="text-amber-600 text-sm">Verification Pending</span>;
+    }
+
+    return <Link href="/verify" className="text-red-500 text-sm underline">Verify Now</Link>;
+  };
+
   return (
     <nav className="bg-white border-b border-slate-100 sticky top-0 z-50 shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-
-        {/* Top Bar */}
         <div className="flex items-center justify-between h-16">
-
-          {/* Logo */}
           <Link href="/" className="flex items-center gap-2.5">
             <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
               <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -68,16 +94,9 @@ export default function Navbar() {
             </span>
           </Link>
 
-          {/* Desktop Links */}
           <div className="hidden sm:flex items-center gap-2">
-
             <Link href="/" className={linkClass("/")}>Browse</Link>
-
-            <Link href="/reels" className={linkClass("/reels")}>
-              <span className="flex items-center gap-1.5">
-                🎬 Reels
-              </span>
-            </Link>
+            <Link href="/reels" className={linkClass("/reels")}>Reels</Link>
 
             {loggedIn && (
               <Link href="/add-product" className={linkClass("/add-product")}>
@@ -85,8 +104,14 @@ export default function Navbar() {
               </Link>
             )}
 
-            {/* 🔔 Notification Bell */}
+            {loggedIn && user?.role === "admin" && (
+              <Link href="/admin" className={linkClass("/admin")}>
+                Admin
+              </Link>
+            )}
+
             {loggedIn && <NotificationBell />}
+            {verificationStatus()}
 
             {loggedIn ? (
               <button
@@ -105,10 +130,10 @@ export default function Navbar() {
             )}
           </div>
 
-          {/* Mobile Menu Button */}
           <button
             className="sm:hidden p-2 rounded-lg text-slate-500 hover:bg-slate-100"
             onClick={() => setMenuOpen(!menuOpen)}
+            aria-label="Toggle menu"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               {menuOpen
@@ -118,14 +143,11 @@ export default function Navbar() {
           </button>
         </div>
 
-        {/* Mobile Menu */}
         {menuOpen && (
           <div className="sm:hidden pb-4 flex flex-col gap-1">
-
             <Link href="/" className={linkClass("/")} onClick={() => setMenuOpen(false)}>
               Browse
             </Link>
-
             <Link href="/reels" className={linkClass("/reels")} onClick={() => setMenuOpen(false)}>
               Reels
             </Link>
@@ -136,8 +158,18 @@ export default function Navbar() {
                   Sell
                 </Link>
 
+                {user?.role === "admin" && (
+                  <Link href="/admin" className={linkClass("/admin")} onClick={() => setMenuOpen(false)}>
+                    Admin
+                  </Link>
+                )}
+
                 <div className="px-3 py-2">
                   <NotificationBell />
+                </div>
+
+                <div className="px-3">
+                  {verificationStatus()}
                 </div>
               </>
             )}

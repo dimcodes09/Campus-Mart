@@ -8,11 +8,12 @@ const socket = io(SOCKET_URL, {
   reconnection: true,
   reconnectionDelay: 1000,
   reconnectionAttempts: Infinity,
+  timeout: 5000,
   withCredentials: true,
 });
 
 export function connectSocket() {
-  if (!socket.connected) {
+  if (!socket.connected && !socket.active) {
     socket.connect();
   }
 

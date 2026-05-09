@@ -9,10 +9,21 @@ const emitOnlineUsers = () => {
 
 const initSocket = (server) => {
   const { Server } = require("socket.io");
+  const clientOrigins = (process.env.CLIENT_URL || "http://localhost:3000,http://localhost:3001")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean);
 
   ioInstance = new Server(server, {
     cors: {
-      origin: process.env.CLIENT_URL || "http://localhost:3000",
+      origin(origin, callback) {
+        if (!origin || clientOrigins.includes(origin)) {
+          callback(null, true);
+          return;
+        }
+
+        callback(new Error(`Origin ${origin} is not allowed by Socket.IO CORS.`));
+      },
       methods: ["GET", "POST"],
       credentials: true,
     },

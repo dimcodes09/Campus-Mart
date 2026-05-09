@@ -17,4 +17,10 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+export const getVerifications = () => api.get("/admin/verifications");
+export const approveVerification = (id) => api.patch(`/admin/verify/${id}`);
+export const rejectVerification = (id) => api.patch(`/admin/reject/${id}`);
+export const submitStudentVerification = (studentIdImage) =>
+  api.post("/auth/verify-student", { studentIdImage });
+
 export default api;
