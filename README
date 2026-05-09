@@ -1,0 +1,28 @@
+# Student Marketplace
+
+A campus marketplace for buying, selling, and renting items.
+
+## Features
+- Buy / Sell products
+- Rental system with deposit
+- Reels UI
+- AI suggestions (planned)
+- Real-time notifications (Socket.io)
+
+## Tech Stack
+- Next.js
+- Node.js + Express
+- MongoDB
+- Socket.io
+
+## Setup
+
+### Backend
+cd backend
+npm install
+npm run dev
+
+### Frontend
+cd frontend
+npm install
+npm run dev
