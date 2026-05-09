@@ -18,17 +18,19 @@ Return ONLY this JSON (no extra text):
 }
 `;
 
-const descriptionPrompt = ({ title, category, condition }) => `
+const descriptionPrompt = ({ title, category, condition, usageDuration }) => `
 Write a short product listing description for a student marketplace.
 
 Product: "${title}"
 Category: "${category}"
 Condition: "${condition || "good"}"
+Used for: "${usageDuration || "unknown duration"}"
 
 Rules:
 - 2-3 lines only
 - Simple, friendly English
-- Mention condition and why it's useful for students
+- Mention condition and how long it was used (if known)
+- Highlight why it's useful for students
 
 Return ONLY this JSON (no extra text):
 {

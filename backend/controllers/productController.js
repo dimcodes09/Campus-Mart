@@ -9,7 +9,7 @@ const createProduct = async (req, res, next) => {
     if (!req.user.isVerified)
       return res.status(403).json({ message: "Only verified students can perform this action" });
 
-    const { title, description, imageUrl, reelVideoUrl, price, rentPrice, deposit, category } = req.body;
+    const { title, description, imageUrl, reelVideoUrl, price, rentPrice, deposit, category, condition, usageDuration } = req.body;
 
     const product = await Product.create({
       title,
@@ -20,6 +20,8 @@ const createProduct = async (req, res, next) => {
       rentPrice,
       deposit,
       category,
+      condition,
+      usageDuration,
       owner: req.user._id,
     });
 
@@ -95,7 +97,7 @@ const updateProduct = async (req, res, next) => {
       return res.status(403).json({ success: false, message: "Not authorized to update this product." });
     }
 
-    const allowed = ["title", "description", "imageUrl", "reelVideoUrl", "price", "rentPrice", "deposit", "category", "status"];
+    const allowed = ["title", "description", "imageUrl", "reelVideoUrl", "price", "rentPrice", "deposit", "category", "status", "condition", "usageDuration"];
     allowed.forEach((field) => {
       if (req.body[field] !== undefined) product[field] = req.body[field];
     });

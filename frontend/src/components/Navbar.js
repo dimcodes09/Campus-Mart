@@ -61,10 +61,9 @@ export default function Navbar() {
   if (pathname === "/reels") return null;
 
   const linkClass = (href) =>
-    `text-sm font-medium transition-colors duration-150 px-3 py-1.5 rounded-lg ${
-      pathname === href
-        ? "bg-indigo-600 text-white"
-        : "text-slate-600 hover:text-indigo-600 hover:bg-indigo-50"
+    `text-sm font-medium transition-colors duration-150 px-3 py-1.5 rounded-lg ${pathname === href
+      ? "bg-indigo-600 text-white"
+      : "text-slate-600 hover:text-indigo-600 hover:bg-indigo-50"
     }`;
 
   const verificationStatus = () => {

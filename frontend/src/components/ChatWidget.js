@@ -3,6 +3,7 @@ import { useState, useRef, useEffect } from "react";
 import api from "@/services/api";
 
 export default function ChatWidget() {
+  const [mounted, setMounted] = useState(false);
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState([
     { role: "assistant", text: "Hi! I'm your campus marketplace assistant. Ask me anything! 👋" }
@@ -10,6 +11,10 @@ export default function ChatWidget() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const bottomRef = useRef(null);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -35,6 +40,8 @@ export default function ChatWidget() {
   function handleKey(e) {
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); }
   }
+
+  if (!mounted) return null;
 
   return (
     <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3">

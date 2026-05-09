@@ -1,13 +1,13 @@
-import { v4 as uuid } from "uuid";
+const { randomUUID } = require("crypto");
 
-export const generateRentalAgreement = ({
+const generateRentalAgreement = ({
   product, renter, owner, startDate, endDate, deposit, rentPerDay,
 }) => {
   const start = new Date(startDate);
   const end = new Date(endDate);
   const days = Math.max(1, Math.ceil((end - start) / (1000 * 60 * 60 * 24)));
   const totalRent = days * rentPerDay;
-  const agreementId = `CA-${Date.now()}-${uuid().slice(0, 6).toUpperCase()}`;
+  const agreementId = `CA-${Date.now()}-${randomUUID().slice(0, 6).toUpperCase()}`;
   const createdAt = new Date().toLocaleDateString("en-IN", {
     day: "2-digit", month: "long", year: "numeric",
   });
@@ -76,3 +76,5 @@ acknowledges and agrees to all terms above.
 
   return { agreementText, agreementId, createdAt };
 };
+
+module.exports = { generateRentalAgreement };

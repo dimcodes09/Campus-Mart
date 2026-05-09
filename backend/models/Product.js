@@ -39,6 +39,15 @@ const productSchema = new mongoose.Schema(
       required: [true, "Category is required"],
       enum: ["books", "electronics", "furniture", "clothing", "sports", "other"],
     },
+    condition: {
+      type: String,
+      enum: ["new", "like_new", "good", "fair", "old"],
+      default: "good",
+    },
+    usageDuration: {
+      type: String,
+      default: "",
+    },
     owner: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",

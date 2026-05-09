@@ -1,7 +1,37 @@
 const Rental = require("../models/Rental");
 const Product = require("../models/Product");
+const User = require("../models/User");
+const { generateRentalAgreement } = require("../utils/agreementGenerator");
 
 const { emitToUser } = require("../socket");
+
+const getAgreementPreview = async (req, res) => {
+  try {
+    const { productId, startDate, endDate } = req.body;
+
+    if (!productId || !startDate || !endDate)
+      return res.status(400).json({ message: "productId, startDate, endDate required" });
+
+    const product = await Product.findById(productId).populate("owner", "name email");
+    if (!product) return res.status(404).json({ message: "Product not found" });
+
+    const renter = await User.findById(req.user._id).select("name email");
+
+    const { agreementText, agreementId } = generateRentalAgreement({
+      product,
+      renter,
+      owner: product.owner,
+      startDate,
+      endDate,
+      deposit: product.deposit || 0,
+      rentPerDay: product.rentPrice || product.price,
+    });
+
+    res.json({ agreementText, agreementId });
+  } catch (err) {
+    res.status(500).json({ message: "Failed to generate agreement" });
+  }
+};
 
 // @route  POST /api/rentals
 // @access Private
@@ -34,6 +64,10 @@ const createRental = async (req, res, next) => {
       endDate,
       deposit: product.deposit,
       status: "pending",
+
+      // ✅ ADDED (as Claude said — NO logic change)
+      agreementText: req.body.agreementText,
+      agreementId: req.body.agreementId,
     });
 
     const ownerId = product.owner.toString();
@@ -194,6 +228,7 @@ const getRental = async (req, res, next) => {
 
 module.exports = {
   createRental,
+  getAgreementPreview,
   confirmRental,
   returnRental,
   cancelRental,

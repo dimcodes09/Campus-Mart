@@ -15,6 +15,14 @@ const CATEGORIES = [
   { value: "other", label: "Other" },
 ];
 
+const CONDITIONS = [
+  { value: "new",      label: "New" },
+  { value: "like_new", label: "Like New" },
+  { value: "good",     label: "Good" },
+  { value: "fair",     label: "Fair" },
+  { value: "old",      label: "Old" },
+];
+
 const emptyForm = {
   title: "",
   description: "",
@@ -24,6 +32,8 @@ const emptyForm = {
   rentPrice: "",
   deposit: "",
   category: "",
+  condition: "good",
+  usageDuration: "",
 };
 
 export default function AddProductPage() {
@@ -60,6 +70,8 @@ export default function AddProductPage() {
       const res = await api.post("/ai/generate-description", {
         title: form.title,
         category: form.category,
+        condition: form.condition,
+        usageDuration: form.usageDuration,
       });
       const desc =
         res.data.description || res.data.data || res.data.result || "";
@@ -235,6 +247,30 @@ export default function AddProductPage() {
                 </option>
               ))}
             </select>
+
+            {/* Condition */}
+            <select
+              name="condition"
+              value={form.condition}
+              onChange={handleChange}
+              className="w-full px-4 py-3 border rounded-xl"
+            >
+              {CONDITIONS.map((c) => (
+                <option key={c.value} value={c.value}>
+                  {c.label}
+                </option>
+              ))}
+            </select>
+
+            {/* Usage Duration */}
+            <input
+              type="text"
+              name="usageDuration"
+              value={form.usageDuration}
+              onChange={handleChange}
+              placeholder="Usage duration (e.g. 6 months, 1 year)"
+              className="w-full px-4 py-3 border rounded-xl"
+            />
 
             {/* Price */}
             <div className="flex gap-2">

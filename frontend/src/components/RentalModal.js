@@ -1,5 +1,9 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import api from "@/services/api";
+import RentalAgreementModal from "./RentalAgreementModal";
+
 const INR = "\u20b9";
 
 function formatCurrency(value, fallback = "N/A") {
@@ -28,9 +32,64 @@ export default function RentalModal({
   const end = rental?.endDate ? new Date(rental.endDate) : null;
   const rentalDays =
     start && end ? Math.max(1, Math.ceil((end - start) / 86400000)) : 0;
+
   const rentTotal = Number(product?.rentPrice || 0) * rentalDays;
   const deposit = Number(product?.deposit || 0);
   const total = rentTotal + deposit;
+
+  const [agreement, setAgreement] = useState(null);
+  const [showAgreement, setShowAgreement] = useState(false);
+  const [rentalLoading, setRentalLoading] = useState(false);
+
+  useEffect(() => {
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = originalOverflow;
+    };
+  }, []);
+
+  const handleConfirmClick = async () => {
+    try {
+      setRentalLoading(true);
+
+      const { data } = await api.post("/rentals/agreement", {
+        productId: product._id,
+        startDate: rental.startDate,
+        endDate: rental.endDate,
+      });
+
+      setAgreement(data);
+      setShowAgreement(true);
+    } catch {
+      alert("Could not generate agreement. Try again.");
+    } finally {
+      setRentalLoading(false);
+    }
+  };
+
+  const handleAcceptAgreement = async () => {
+    try {
+      await onConfirm?.({
+        agreementText: agreement.agreementText,
+        agreementId: agreement.agreementId,
+      });
+    } catch {
+      // The product page owns the visible error state.
+    }
+  };
+
+  if (showAgreement && agreement) {
+    return (
+      <RentalAgreementModal
+        agreement={agreement}
+        onAccept={handleAcceptAgreement}
+        onCancel={() => setShowAgreement(false)}
+        loading={loading}
+      />
+    );
+  }
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 py-6">
@@ -52,6 +111,7 @@ export default function RentalModal({
                 {product?.title}
               </h2>
             </div>
+
             <button
               type="button"
               onClick={onCancel}
@@ -73,6 +133,7 @@ export default function RentalModal({
                 {formatDate(rental?.startDate)}
               </p>
             </div>
+
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
               <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
                 End
@@ -90,6 +151,7 @@ export default function RentalModal({
                 {rentalDays} day{rentalDays !== 1 ? "s" : ""}
               </span>
             </div>
+
             <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3 text-sm">
               <span className="text-slate-500">
                 Rent ({formatCurrency(product?.rentPrice, `${INR}0`)}/day)
@@ -98,12 +160,14 @@ export default function RentalModal({
                 {formatCurrency(rentTotal, `${INR}0`)}
               </span>
             </div>
+
             <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3 text-sm">
               <span className="text-slate-500">Refundable deposit</span>
               <span className="font-semibold text-slate-900">
                 {formatCurrency(deposit, "None")}
               </span>
             </div>
+
             <div className="flex items-center justify-between bg-indigo-50 px-4 py-4">
               <span className="text-sm font-bold text-indigo-950">Total due</span>
               <span className="text-xl font-bold text-indigo-700">
@@ -121,13 +185,14 @@ export default function RentalModal({
           >
             Cancel
           </button>
+
           <button
             type="button"
-            onClick={onConfirm}
-            disabled={loading}
+            onClick={handleConfirmClick}
+            disabled={rentalLoading}
             className="flex-1 rounded-xl bg-indigo-600 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-indigo-300"
           >
-            {loading ? "Submitting..." : "Confirm Rental"}
+            {rentalLoading ? "Loading..." : "Confirm Rental"}
           </button>
         </div>
       </div>

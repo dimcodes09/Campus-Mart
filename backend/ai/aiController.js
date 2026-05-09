@@ -25,7 +25,7 @@ const getPriceRecommendation = async (req, res) => {
 
 // POST /api/ai/generate-description
 const generateDescription = async (req, res) => {
-  const { title, category, condition } = req.body;
+  const { title, category, condition, usageDuration } = req.body;
 
   if (!title || !category) {
     return res.status(400).json({ error: "title and category are required" });
@@ -33,7 +33,7 @@ const generateDescription = async (req, res) => {
 
   try {
     const result = await askGroq(
-      descriptionPrompt({ title, category, condition }),
+      descriptionPrompt({ title, category, condition, usageDuration }),
       0.8
     );
     res.json(result);

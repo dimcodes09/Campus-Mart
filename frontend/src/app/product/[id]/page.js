@@ -14,13 +14,11 @@ const AUTH_CHANGE_EVENT = "auth-change";
 
 function getStoredUserSnapshot() {
   if (typeof window === "undefined") return "";
-
   return localStorage.getItem("user") || "";
 }
 
 function parseStoredUser(snapshot) {
   if (!snapshot) return null;
-
   try {
     return JSON.parse(snapshot);
   } catch {
@@ -31,7 +29,6 @@ function parseStoredUser(snapshot) {
 function subscribeToAuthChanges(callback) {
   window.addEventListener("storage", callback);
   window.addEventListener(AUTH_CHANGE_EVENT, callback);
-
   return () => {
     window.removeEventListener("storage", callback);
     window.removeEventListener(AUTH_CHANGE_EVENT, callback);
@@ -43,6 +40,14 @@ function formatCurrency(value, fallback = "N/A") {
   if (!Number.isFinite(number) || number <= 0) return fallback;
   return `${INR}${number.toLocaleString("en-IN")}`;
 }
+
+const CONDITION_MAP = {
+  new:      { label: "New",      color: "bg-emerald-50 text-emerald-700 border-emerald-200" },
+  like_new: { label: "Like New", color: "bg-teal-50 text-teal-700 border-teal-200" },
+  good:     { label: "Good",     color: "bg-blue-50 text-blue-700 border-blue-200" },
+  fair:     { label: "Fair",     color: "bg-amber-50 text-amber-700 border-amber-200" },
+  old:      { label: "Old",      color: "bg-slate-100 text-slate-600 border-slate-300" },
+};
 
 export default function ProductDetailPage() {
   const { id } = useParams();
@@ -60,6 +65,8 @@ export default function ProductDetailPage() {
   const [rentalError, setRentalError] = useState("");
   const [toast, setToast] = useState(null);
   const [daysLeft, setDaysLeft] = useState(null);
+  const [showChat, setShowChat] = useState(false);
+
   const currentUserSnapshot = useSyncExternalStore(
     subscribeToAuthChanges,
     getStoredUserSnapshot,
@@ -69,7 +76,6 @@ export default function ProductDetailPage() {
     () => parseStoredUser(currentUserSnapshot),
     [currentUserSnapshot]
   );
-  const [showChat, setShowChat] = useState(false);
 
   useEffect(() => {
     async function fetchProduct() {
@@ -83,17 +89,42 @@ export default function ProductDetailPage() {
         setLoading(false);
       }
     }
-
     if (id) fetchProduct();
   }, [id]);
 
-  async function handleConfirmRental() {
+  function validateRentalDates() {
+    if (!rental.startDate || !rental.endDate) {
+      setRentalError("Please select both start and end dates.");
+      return false;
+    }
+    if (new Date(rental.endDate) <= new Date(rental.startDate)) {
+      setRentalError("End date must be after start date.");
+      return false;
+    }
+    setRentalError("");
+    return true;
+  }
+
+  function openRentalModal() {
+    if (validateRentalDates()) {
+      setShowModal(true);
+    }
+  }
+
+  function handleRentNowClick() {
+    if (!rental.startDate || !rental.endDate) {
+      setShowDateForm(true);
+    } else {
+      openRentalModal();
+    }
+  }
+
+  async function handleConfirmRental(agreementPayload = {}) {
     const token = localStorage.getItem("token");
     if (!token) {
       router.push("/login");
       return;
     }
-
     if (!validateRentalDates()) return;
 
     setRentalLoading(true);
@@ -104,6 +135,8 @@ export default function ProductDetailPage() {
         productId: id,
         startDate: rental.startDate,
         endDate: rental.endDate,
+        agreementText: agreementPayload.agreementText,
+        agreementId: agreementPayload.agreementId,
       });
 
       const days = Math.max(
@@ -122,50 +155,24 @@ export default function ProductDetailPage() {
         addNotification(`Return "${product?.title}" by ${rental.endDate}`, "warning");
       }, 5000);
 
-      setToast({
-        message: "Rental created successfully!",
-        type: "success",
-      });
+      setToast({ message: "Rental created successfully!", type: "success" });
     } catch (err) {
       const msg = err.response?.data?.message || "Failed to create rental.";
       setRentalError(msg);
       addNotification("Rental failed.", "error");
-      setToast({
-        message: msg,
-        type: "error",
-      });
+      setToast({ message: msg, type: "error" });
+      throw err;
     } finally {
       setRentalLoading(false);
     }
   }
 
-  function handleRentNowClick() {
-    if (!rental.startDate || !rental.endDate) {
-      setShowDateForm(true);
-    } else {
-      openRentalModal();
+  function handleMessageSeller() {
+    if (!currentUser?._id) {
+      router.push("/login");
+      return;
     }
-  }
-
-  function validateRentalDates() {
-    if (!rental.startDate || !rental.endDate) {
-      setRentalError("Please select both start and end dates.");
-      return false;
-    }
-
-    if (new Date(rental.endDate) <= new Date(rental.startDate)) {
-      setRentalError("End date must be after start date.");
-      return false;
-    }
-
-    setRentalError("");
-    return true;
-  }
-
-  function openRentalModal() {
-    if (validateRentalDates()) {
-      setShowModal(true);
-    }
+    setShowChat(true);
   }
 
   const today = new Date().toISOString().split("T")[0];
@@ -193,14 +200,9 @@ export default function ProductDetailPage() {
   const ownerId = product.owner?._id || product.owner;
   const isOwner = currentUser?._id && ownerId && currentUser._id === ownerId.toString();
 
-  function handleMessageSeller() {
-    if (!currentUser?._id) {
-      router.push("/login");
-      return;
-    }
-
-    setShowChat(true);
-  }
+  const conditionInfo = CONDITION_MAP[product.condition] || (
+    product.condition ? { label: product.condition, color: "bg-slate-100 text-slate-600 border-slate-200" } : null
+  );
 
   return (
     <>
@@ -223,6 +225,7 @@ export default function ProductDetailPage() {
       )}
 
       <main className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
+        {/* Breadcrumb */}
         <div className="mb-8 flex min-w-0 items-center gap-2 text-sm">
           <Link href="/" className="font-medium text-slate-500 transition-colors hover:text-indigo-600">
             Home
@@ -232,6 +235,7 @@ export default function ProductDetailPage() {
         </div>
 
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(420px,0.92fr)]">
+          {/* ── Image section ── */}
           <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
             <div className="relative aspect-[4/3] bg-gradient-to-br from-indigo-50 to-slate-100">
               {product.imageUrl ? (
@@ -239,9 +243,7 @@ export default function ProductDetailPage() {
                   src={product.imageUrl}
                   alt={product.title || "Product image"}
                   className="h-full w-full object-cover"
-                  onError={(event) => {
-                    event.currentTarget.style.display = "none";
-                  }}
+                  onError={(e) => { e.currentTarget.style.display = "none"; }}
                 />
               ) : (
                 <div className="flex h-full w-full items-center justify-center">
@@ -266,8 +268,11 @@ export default function ProductDetailPage() {
             </div>
           </section>
 
+          {/* ── Info section ── */}
           <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
             <div className="space-y-5">
+
+              {/* Title + Description + Condition/Duration badges */}
               <div>
                 <h1 className="text-3xl font-bold leading-tight text-slate-950">
                   {product.title}
@@ -277,59 +282,76 @@ export default function ProductDetailPage() {
                     {product.description}
                   </p>
                 )}
-              </div>
 
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                <div className="rounded-2xl border border-indigo-100 bg-indigo-50 p-4">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-indigo-500">Buy Price</p>
-                  <p className="mt-1 text-2xl font-bold text-indigo-950">
-                    {formatCurrency(product.price, `${INR}0`)}
-                  </p>
-                </div>
-                <div className="rounded-2xl border border-amber-100 bg-amber-50 p-4">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-amber-600">Rent/day</p>
-                  <p className="mt-1 text-2xl font-bold text-amber-950">
-                    {formatCurrency(product.rentPrice)}
-                  </p>
-                </div>
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Deposit</p>
-                  <p className="mt-1 text-2xl font-bold text-slate-950">
-                    {formatCurrency(product.deposit, "None")}
-                  </p>
-                </div>
-              </div>
+                {/* Condition & Usage Duration badges */}
+                {(conditionInfo || product.usageDuration) && (
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {conditionInfo && (
+                      <span className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold ${conditionInfo.color}`}>
+                        {/* Star icon */}
+                        <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 20 20">
+                          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                        </svg>
+                        Condition: {conditionInfo.label}
+                      </span>
+                    )}
 
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Listed by</p>
-                <div className="mt-2 flex items-center gap-3">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-sm font-bold text-white">
-                    {(product.owner?.name || "S").charAt(0).toUpperCase()}
-                  </div>
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold text-slate-900">
-                      {product.owner?.name || "Student seller"}
-                    </p>
-                    {product.owner?.email && (
-                      <p className="truncate text-xs text-slate-500">{product.owner.email}</p>
+                    {product.usageDuration && (
+                      <span className="inline-flex items-center gap-1.5 rounded-full border border-violet-200 bg-violet-50 px-3 py-1 text-xs font-semibold text-violet-700">
+                        {/* Clock icon */}
+                        <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Used for: {product.usageDuration}
+                      </span>
                     )}
                   </div>
+                )}
+              </div>
+
+              {/* Pricing grid */}
+              <div className="grid grid-cols-3 gap-3">
+                <div className="rounded-2xl bg-gradient-to-br from-indigo-500 to-indigo-700 p-4 text-white">
+                  <p className="text-xs font-semibold opacity-75 uppercase tracking-wide">Buy Price</p>
+                  <p className="mt-1 text-xl font-extrabold">{formatCurrency(product.price, `${INR}0`)}</p>
+                </div>
+                <div className="rounded-2xl bg-gradient-to-br from-amber-400 to-amber-600 p-4 text-white">
+                  <p className="text-xs font-semibold opacity-75 uppercase tracking-wide">Rent/day</p>
+                  <p className="mt-1 text-xl font-extrabold">{formatCurrency(product.rentPrice, "—")}</p>
+                </div>
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Deposit</p>
+                  <p className="mt-1 text-xl font-extrabold text-slate-800">{formatCurrency(product.deposit, "None")}</p>
+                </div>
+              </div>
+
+              {/* Seller card */}
+              <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-3">Listed by</p>
+                <div className="flex items-center gap-3">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 text-sm font-bold text-white shadow-md">
+                    {(product.owner?.name || "S").charAt(0).toUpperCase()}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-bold text-slate-900">{product.owner?.name || "Student seller"}</p>
+                    {product.owner?.email && <p className="truncate text-xs text-slate-500">{product.owner.email}</p>}
+                  </div>
+                  <span className="flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 border border-emerald-100">
+                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/></svg>
+                    Verified
+                  </span>
                 </div>
                 {isOwner ? (
-                  <div className="mt-4 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-center text-sm font-semibold text-slate-400">
-                    This is your listing
-                  </div>
+                  <div className="mt-4 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-center text-sm font-semibold text-slate-400">This is your listing</div>
                 ) : (
-                  <button
-                    type="button"
-                    onClick={handleMessageSeller}
-                    className="mt-4 w-full rounded-xl border border-indigo-200 bg-white px-4 py-2.5 text-sm font-semibold text-indigo-700 transition-colors hover:bg-indigo-50"
-                  >
-                    Message Seller
+                  <button type="button" onClick={handleMessageSeller}
+                    className="mt-4 w-full rounded-xl border border-indigo-200 bg-white px-4 py-2.5 text-sm font-semibold text-indigo-700 transition-all hover:bg-indigo-50 hover:border-indigo-300 hover:shadow-sm">
+                    💬 Message Seller
                   </button>
                 )}
               </div>
 
+              {/* Rental success */}
               {rentalSuccess && (
                 <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-700">
                   <p className="font-semibold">Rental request sent successfully.</p>
@@ -339,6 +361,7 @@ export default function ProductDetailPage() {
                 </div>
               )}
 
+              {/* Date picker */}
               {!rentalSuccess && showDateForm && (
                 <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                   <div className="mb-3 flex items-center justify-between gap-3">
@@ -356,7 +379,6 @@ export default function ProductDetailPage() {
                       {rentalError}
                     </p>
                   )}
-
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <label className="text-xs font-medium text-slate-600">
                       Start Date
@@ -364,10 +386,7 @@ export default function ProductDetailPage() {
                         type="date"
                         min={today}
                         value={rental.startDate}
-                        onChange={(e) => {
-                          setRental({ ...rental, startDate: e.target.value });
-                          setRentalError("");
-                        }}
+                        onChange={(e) => { setRental({ ...rental, startDate: e.target.value }); setRentalError(""); }}
                         className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-indigo-300"
                       />
                     </label>
@@ -377,15 +396,11 @@ export default function ProductDetailPage() {
                         type="date"
                         min={rental.startDate || today}
                         value={rental.endDate}
-                        onChange={(e) => {
-                          setRental({ ...rental, endDate: e.target.value });
-                          setRentalError("");
-                        }}
+                        onChange={(e) => { setRental({ ...rental, endDate: e.target.value }); setRentalError(""); }}
                         className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-indigo-300"
                       />
                     </label>
                   </div>
-
                   <button
                     onClick={openRentalModal}
                     disabled={!rental.startDate || !rental.endDate}
@@ -396,24 +411,22 @@ export default function ProductDetailPage() {
                 </div>
               )}
 
+              {/* Action buttons */}
               {!rentalSuccess && !showDateForm && (
                 <div className="flex flex-col gap-3 sm:flex-row">
                   {canRent && (
-                    <button
-                      onClick={handleRentNowClick}
-                      className="flex-1 rounded-xl bg-indigo-600 px-5 py-3.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-indigo-700"
-                    >
-                      Rent Now
+                    <button onClick={handleRentNowClick}
+                      className="flex-1 rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-700 px-5 py-3.5 text-sm font-semibold text-white shadow-md shadow-indigo-200 hover:shadow-indigo-300 hover:-translate-y-0.5 transition-all">
+                      🗓 Rent Now
                     </button>
                   )}
-                  <Link
-                    href="/"
-                    className="rounded-xl border border-slate-200 px-5 py-3.5 text-center text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-50"
-                  >
-                    Back to Browse
+                  <Link href="/"
+                    className="rounded-xl border border-slate-200 px-5 py-3.5 text-center text-sm font-semibold text-slate-600 hover:bg-slate-50 hover:border-slate-300 transition-all">
+                    ← Back to Browse
                   </Link>
                 </div>
               )}
+
             </div>
           </section>
         </div>
