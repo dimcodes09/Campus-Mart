@@ -33,9 +33,21 @@ const clientOrigins = (process.env.CLIENT_URL || "http://localhost:3000,http://l
 
 const corsOptions = {
   origin(origin, callback) {
-    if (!origin || clientOrigins.includes(origin)) {
-      callback(null, true);
-      return;
+    if (!origin) return callback(null, true);
+
+    // Allow any *.vercel.app preview/production URL
+    if (origin.endsWith(".vercel.app")) {
+      return callback(null, true);
+    }
+
+    // Allow localhost for development
+    if (origin.startsWith("http://localhost") || origin.startsWith("http://127.0.0.1")) {
+      return callback(null, true);
+    }
+
+    // Allow explicitly listed origins from CLIENT_URL env var
+    if (clientOrigins.includes(origin)) {
+      return callback(null, true);
     }
 
     callback(new Error(`Origin ${origin} is not allowed by CORS.`));
