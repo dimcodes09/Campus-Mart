@@ -1,5 +1,5 @@
 // frontend/src/services/conditionService.js
-const BASE = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000").replace(/\/$/, "");
+const BASE = (process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000").replace(/\/$/, "");
 
 const authHeaders = (token) => ({
   Authorization: `Bearer ${token}`,
