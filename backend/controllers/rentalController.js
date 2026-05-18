@@ -190,7 +190,11 @@ const getMyRentals = async (req, res, next) => {
     }
 
     const rentals = await Rental.find(filter)
-      .populate("productId", "title rentPrice deposit category")
+      .populate({
+        path: "productId",
+        select: "title rentPrice deposit category owner",
+        populate: { path: "owner", select: "name email" },
+      })
       .populate("renterId", "name email")
       .sort({ createdAt: -1 });
 

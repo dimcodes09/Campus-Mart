@@ -1,5 +1,7 @@
 const Product = require("../models/Product");
 
+const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
 // @route  POST /api/products
 // @access Private
 const createProduct = async (req, res, next) => {
@@ -35,10 +37,16 @@ const createProduct = async (req, res, next) => {
 // @access Public
 const getAllProducts = async (req, res, next) => {
   try {
-    const { category, status, page = 1, limit = 10 } = req.query;
+    const { category, product, search, status, page = 1, limit = 10 } = req.query;
 
     const filter = {};
-    if (category) filter.category = category;
+    if (category) filter.category = String(category).toLowerCase();
+    if (product || search) {
+      filter.title = {
+        $regex: escapeRegex(String(product || search).trim()),
+        $options: "i",
+      };
+    }
     if (status) filter.status = status;
 
     const skip = (Number(page) - 1) * Number(limit);
@@ -57,6 +65,24 @@ const getAllProducts = async (req, res, next) => {
       total,
       page: Number(page),
       pages: Math.ceil(total / Number(limit)),
+      products,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @route  GET /api/products/my
+// @access Private
+const getMyProducts = async (req, res, next) => {
+  try {
+    const products = await Product.find({ owner: req.user._id })
+      .populate("owner", "name email rating")
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      count: products.length,
       products,
     });
   } catch (error) {
@@ -130,4 +156,29 @@ const deleteProduct = async (req, res, next) => {
   }
 };
 
-module.exports = { createProduct, getAllProducts, getProduct, updateProduct, deleteProduct };
+// @route  PATCH /api/products/:id/status
+// @access Private (owner only)
+const markStatus = async (req, res, next) => {
+  try {
+    const { status } = req.body;
+    if (!["available", "sold", "rented"].includes(status)) {
+      return res.status(400).json({ success: false, message: "Invalid status. Must be 'available', 'sold', or 'rented'." });
+    }
+
+    const product = await Product.findById(req.params.id);
+    if (!product) {
+      return res.status(404).json({ success: false, message: "Product not found." });
+    }
+    if (product.owner.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ success: false, message: "Not authorized." });
+    }
+
+    product.status = status;
+    await product.save();
+    res.status(200).json({ success: true, product });
+  } catch (error) {
+    next(error);
+  }
+};
+
+module.exports = { createProduct, getAllProducts, getMyProducts, getProduct, updateProduct, deleteProduct, markStatus };

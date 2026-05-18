@@ -66,6 +66,9 @@ export default function ProductDetailPage() {
   const [toast, setToast] = useState(null);
   const [daysLeft, setDaysLeft] = useState(null);
   const [showChat, setShowChat] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [statusLoading, setStatusLoading] = useState(false);
 
   const currentUserSnapshot = useSyncExternalStore(
     subscribeToAuthChanges,
@@ -175,6 +178,38 @@ export default function ProductDetailPage() {
     setShowChat(true);
   }
 
+  async function handleDeleteProduct() {
+    try {
+      setDeleteLoading(true);
+      await api.delete(`/products/${id}`);
+      addNotification("🗑 Product deleted.", "success");
+      router.push("/");
+    } catch (err) {
+      const msg = err.response?.data?.message || "Failed to delete product.";
+      setToast({ message: msg, type: "error" });
+    } finally {
+      setDeleteLoading(false);
+      setShowDeleteConfirm(false);
+    }
+  }
+
+  async function handleMarkStatus(newStatus) {
+    try {
+      setStatusLoading(true);
+      const res = await api.patch(`/products/${id}/status`, { status: newStatus });
+      setProduct(res.data.product);
+      setToast({
+        message: newStatus === "sold" ? "✅ Product marked as Sold!" : "✅ Product marked as Available!",
+        type: "success",
+      });
+    } catch (err) {
+      const msg = err.response?.data?.message || "Failed to update status.";
+      setToast({ message: msg, type: "error" });
+    } finally {
+      setStatusLoading(false);
+    }
+  }
+
   const today = new Date().toISOString().split("T")[0];
 
   if (loading) {
@@ -224,6 +259,46 @@ export default function ProductDetailPage() {
         />
       )}
 
+      {/* Delete confirmation modal */}
+      {showDeleteConfirm && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4"
+          onClick={() => !deleteLoading && setShowDeleteConfirm(false)}
+        >
+          <div
+            className="w-full max-w-sm rounded-3xl border border-slate-200 bg-white p-7 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-red-50 mb-4">
+              <svg className="h-6 w-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+            </div>
+            <h3 className="text-base font-bold text-slate-900">Delete this listing?</h3>
+            <p className="mt-1.5 text-sm text-slate-500">
+              <strong className="text-slate-700">&quot;{product.title}&quot;</strong> will be permanently removed. This cannot be undone.
+            </p>
+            <div className="mt-5 flex gap-3">
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                disabled={deleteLoading}
+                className="flex-1 rounded-xl border border-slate-200 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteProduct}
+                disabled={deleteLoading}
+                className="flex-1 rounded-xl bg-red-600 py-2.5 text-sm font-semibold text-white transition hover:bg-red-700 disabled:opacity-50"
+              >
+                {deleteLoading ? "Deleting…" : "Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <main className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
         {/* Breadcrumb */}
         <div className="mb-8 flex min-w-0 items-center gap-2 text-sm">
@@ -234,15 +309,16 @@ export default function ProductDetailPage() {
           <span className="truncate text-slate-700">{product.title}</span>
         </div>
 
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(420px,0.92fr)]">
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(420px,0.92fr)] items-stretch">
           {/* ── Image section ── */}
-          <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
-            <div className="relative aspect-[4/3] bg-gradient-to-br from-indigo-50 to-slate-100">
+          <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm h-full">
+            <div className="relative bg-gradient-to-br from-indigo-50 to-slate-100 flex items-center justify-center h-full" style={{ minHeight: "340px" }}>
               {product.imageUrl ? (
                 <img
                   src={product.imageUrl}
                   alt={product.title || "Product image"}
-                  className="h-full w-full object-cover"
+                  className="w-full object-contain p-6"
+                  style={{ maxHeight: "500px" }}
                   onError={(e) => { e.currentTarget.style.display = "none"; }}
                 />
               ) : (
@@ -260,8 +336,14 @@ export default function ProductDetailPage() {
                   </span>
                 )}
                 {product.status && (
-                  <span className="rounded-full bg-white/95 px-3 py-1.5 text-xs font-semibold capitalize text-slate-600 shadow-sm">
-                    {product.status}
+                  <span className={`rounded-full px-3 py-1.5 text-xs font-bold capitalize shadow-sm ${
+                    product.status === "sold"
+                      ? "bg-slate-700 text-white"
+                      : product.status === "rented"
+                      ? "bg-amber-500 text-white"
+                      : "bg-emerald-500 text-white"
+                  }`}>
+                    {product.status === "sold" ? "SOLD" : product.status === "rented" ? "🔒 Rented" : "✓ Available"}
                   </span>
                 )}
               </div>
@@ -342,7 +424,47 @@ export default function ProductDetailPage() {
                   </span>
                 </div>
                 {isOwner ? (
-                  <div className="mt-4 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-center text-sm font-semibold text-slate-400">This is your listing</div>
+                  <div className="mt-4 space-y-2">
+                    <p className="text-center text-xs font-semibold uppercase tracking-wide text-slate-400">Your listing</p>
+
+                    {/* Mark sold / relist row */}
+                    {product.status === "sold" ? (
+                      <button
+                        type="button"
+                        disabled={statusLoading}
+                        onClick={() => handleMarkStatus("available")}
+                        className="w-full rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-2.5 text-sm font-semibold text-emerald-700 transition-all hover:bg-emerald-100 disabled:opacity-50"
+                      >
+                        {statusLoading ? "Updating…" : "↩ Relist as Available"}
+                      </button>
+                    ) : product.status !== "rented" ? (
+                      <button
+                        type="button"
+                        disabled={statusLoading}
+                        onClick={() => handleMarkStatus("sold")}
+                        className="w-full rounded-xl border border-slate-300 bg-slate-100 px-4 py-2.5 text-sm font-semibold text-slate-700 transition-all hover:bg-slate-200 disabled:opacity-50"
+                      >
+                        {statusLoading ? "Updating…" : "🏷 Mark as Sold"}
+                      </button>
+                    ) : null}
+
+                    {/* Edit / Delete row */}
+                    <div className="flex gap-2">
+                      <Link
+                        href={`/edit-product/${id}`}
+                        className="flex-1 rounded-xl border border-indigo-200 bg-white px-4 py-2.5 text-center text-sm font-semibold text-indigo-700 transition-all hover:bg-indigo-50 hover:border-indigo-300 hover:shadow-sm"
+                      >
+                        ✏️ Edit
+                      </Link>
+                      <button
+                        type="button"
+                        onClick={() => setShowDeleteConfirm(true)}
+                        className="flex-1 rounded-xl border border-red-200 bg-white px-4 py-2.5 text-sm font-semibold text-red-600 transition-all hover:bg-red-50 hover:border-red-300 hover:shadow-sm"
+                      >
+                        🗑 Delete
+                      </button>
+                    </div>
+                  </div>
                 ) : (
                   <button type="button" onClick={handleMessageSeller}
                     className="mt-4 w-full rounded-xl border border-indigo-200 bg-white px-4 py-2.5 text-sm font-semibold text-indigo-700 transition-all hover:bg-indigo-50 hover:border-indigo-300 hover:shadow-sm">

@@ -50,6 +50,61 @@ const userSchema = new mongoose.Schema(
       min: 0,
       max: 5,
     },
+    points: {
+      type: Number,
+      default: 84,
+      min: 0,
+    },
+    dayStreak: {
+      type: Number,
+      default: 1,
+      min: 0,
+    },
+    rewards: {
+      type: [
+        {
+          id: {
+            type: String,
+            default: "",
+          },
+          title: {
+            type: String,
+            default: "",
+          },
+          description: {
+            type: String,
+            default: "",
+          },
+          pointsCost: {
+            type: Number,
+            default: 0,
+            min: 0,
+          },
+          expiresAt: {
+            type: Date,
+            default: null,
+          },
+          used: {
+            type: Boolean,
+            default: false,
+          },
+          redeemedAt: {
+            type: Date,
+            default: null,
+          },
+        },
+      ],
+      default: () => [
+        {
+          id: "free-delivery-50",
+          title: "Rs.50 OFF",
+          description: "Free Delivery",
+          pointsCost: 50,
+          expiresAt: new Date("2026-06-11T23:59:59.999Z"),
+          used: false,
+        },
+      ],
+    },
   },
   { timestamps: true }
 );

@@ -2,7 +2,7 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const http = require("http");
-
+const conditionRoutes = require("./routes/conditionRoutes")
 const connectDB = require("./config/db");
 const errorHandler = require("./middleware/errorHandler");
 const { protect } = require("./middleware/auth");
@@ -15,6 +15,8 @@ const authRoutes = require("./routes/auth");
 const productRoutes = require("./routes/products");
 const rentalRoutes = require("./routes/rentals");
 const adminRoutes = require("./routes/admin");
+const mailRoutes = require("./routes/mail");
+const userRoutes = require("./routes/user");
 
 // ✅ AI Routes
 const aiRoutes = require("./ai/aiRoutes");
@@ -51,6 +53,9 @@ app.use("/api/auth", authRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/rentals", rentalRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/condition", conditionRoutes);
+app.use("/api/mail", mailRoutes);
+app.use("/api/user", userRoutes);
 
 // AI routes. Keep /ai for compatibility and /api/ai for the frontend api client.
 app.use("/api/ai", aiRoutes);

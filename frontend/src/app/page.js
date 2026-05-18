@@ -4,6 +4,8 @@ import { useSearchParams, useRouter } from "next/navigation";
 import api from "@/services/api";
 import ProductCard from "@/components/ProductCard";
 import Link from "next/link";
+import CATEGORIES from "@/constants/categories";
+import { PRODUCT_REQUEST_PATH } from "@/constants/productRequest";
 
 /* ─── animations ─── */
 const heroCSS = `
@@ -16,6 +18,15 @@ const heroCSS = `
 .au4{animation:fadeUp .5s .3s ease both}
 .float-anim{animation:floatY 3.5s ease-in-out infinite}
 .shimmer{background:linear-gradient(90deg,#f1f5f9 25%,#e8edf5 50%,#f1f5f9 75%);background-size:600px 100%;animation:shimmer 1.3s infinite}
+.cat-card{position:relative;flex-shrink:0;width:200px;height:260px;border-radius:24px;overflow:hidden;cursor:pointer;transition:transform .35s cubic-bezier(.34,1.56,.64,1),box-shadow .35s ease;box-shadow:0 4px 20px rgba(0,0,0,.18)}
+.cat-card:hover{transform:translateY(-6px) scale(1.03);box-shadow:0 16px 40px rgba(0,0,0,.28)}
+.cat-card-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:transform .5s ease}
+.cat-card:hover .cat-card-img{transform:scale(1.08)}
+.cat-card-overlay{position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.82) 0%,rgba(0,0,0,.3) 55%,rgba(0,0,0,.05) 100%)}
+.cat-card-body{position:absolute;bottom:0;left:0;right:0;padding:18px 16px 20px}
+.cat-explore{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.15);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.3);color:#fff;font-size:11px;font-weight:700;letter-spacing:.06em;padding:5px 12px;border-radius:50px;margin-top:8px;opacity:0;transform:translateY(6px);transition:opacity .25s ease,transform .25s ease}
+.cat-card:hover .cat-explore{opacity:1;transform:translateY(0)}
+.cat-placeholder{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:56px}
 `;
 
 /* ─── static data ─── */
@@ -149,10 +160,16 @@ function HomePageInner() {
   const [error, setError] = useState("");
   const [search, setSearch] = useState(searchParams.get("search") || "");
 
-  useEffect(() => { setSearch(searchParams.get("search") || ""); }, [searchParams]);
+  useEffect(() => {
+    const syncSearchId = window.setTimeout(() => {
+      setSearch(searchParams.get("search") || "");
+    }, 0);
+
+    return () => window.clearTimeout(syncSearchId);
+  }, [searchParams]);
 
   useEffect(() => {
-    api.get("/products")
+    api.get("/products", { params: { status: "available" } })
       .then(res => {
         const list = Array.isArray(res.data) ? res.data : res.data.data || res.data.products || [];
         setProducts(list);
@@ -201,6 +218,17 @@ function HomePageInner() {
               className="inline-flex items-center gap-2 bg-white hover:bg-slate-50 text-slate-800 font-semibold px-7 py-3 rounded-xl text-sm border border-slate-200 hover:border-indigo-300 hover:-translate-y-0.5 transition-all duration-200">
               Post an Item
             </Link>
+            <Link
+              href={PRODUCT_REQUEST_PATH}
+              className="inline-flex items-center gap-2 bg-white hover:bg-slate-50 text-slate-800 font-semibold px-7 py-3 rounded-xl text-sm border border-slate-200 hover:border-indigo-300 hover:-translate-y-0.5 transition-all duration-200"
+            >
+              Request an Item
+            </Link>
+            {/* ── NEW: Browse Categories button ── */}
+            <Link href="/categories"
+              className="inline-flex items-center gap-2 bg-white hover:bg-slate-50 text-slate-800 font-semibold px-7 py-3 rounded-xl text-sm border border-slate-200 hover:border-indigo-300 hover:-translate-y-0.5 transition-all duration-200">
+              Browse Categories →
+            </Link>
           </div>
           <div className="flex flex-wrap gap-x-6 gap-y-2">
             {trustPills.map((t,i) => (
@@ -235,6 +263,41 @@ function HomePageInner() {
             </div>
           </div>
         ))}
+      </section>
+
+      {/* ══ CATEGORY CARDS ══ */}
+      <section className="mb-12">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h2 className="text-2xl font-extrabold text-slate-900">Shop by Category</h2>
+            <p className="text-sm text-slate-400 mt-0.5">Browse what students near you are offering</p>
+          </div>
+          <Link href="/categories" className="text-sm text-indigo-600 font-semibold hover:underline flex items-center gap-1">
+            View all →
+          </Link>
+        </div>
+        <div className="flex gap-4 overflow-x-auto pb-4" style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
+          {CATEGORIES.map((cat) => (
+            <Link key={cat.slug} href={`/category/${cat.slug}`} className="cat-card" style={{ textDecoration: "none" }}>
+              {/* background */}
+              {cat.imageUrl ? (
+                <img src={cat.imageUrl} alt={cat.name} className="cat-card-img" />
+              ) : (
+                <div className="cat-placeholder" style={{ background: cat.gradientBg || "linear-gradient(135deg,#667eea,#764ba2)" }}>
+                  {cat.emoji || cat.name.charAt(0)}
+                </div>
+              )}
+              {/* dark gradient overlay */}
+              <div className="cat-card-overlay" />
+              {/* text body */}
+              <div className="cat-card-body">
+                <p className="text-white text-lg font-extrabold leading-tight" style={{ textShadow: "0 1px 6px rgba(0,0,0,.5)" }}>{cat.name}</p>
+                <p className="text-white/70 text-xs font-medium mt-0.5 uppercase tracking-widest">{cat.count ? `${cat.count} ITEMS` : "EXPLORE"}</p>
+                <span className="cat-explore">EXPLORE →</span>
+              </div>
+            </Link>
+          ))}
+        </div>
       </section>
 
       {/* ══ LISTINGS ══ */}
@@ -297,7 +360,13 @@ function HomePageInner() {
         {!loading && filtered.length > 0 && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 pb-10">
             {filtered.map(product => (
-              <ProductCard key={product._id} product={product}/>
+              <ProductCard
+                key={product._id}
+                product={product}
+                onDeleted={(deletedId) =>
+                  setProducts((prev) => prev.filter((p) => p._id !== deletedId))
+                }
+              />
             ))}
           </div>
         )}

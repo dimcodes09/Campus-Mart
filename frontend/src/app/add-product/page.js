@@ -7,12 +7,13 @@ import Toast from "@/components/Toast";
 import { useNotifications } from "@/context/NotificationContext";
 
 const CATEGORIES = [
-  { value: "books", label: "Books" },
+  { value: "books",       label: "Books" },
   { value: "electronics", label: "Electronics" },
-  { value: "furniture", label: "Furniture" },
-  { value: "clothing", label: "Clothing" },
-  { value: "sports", label: "Sports" },
-  { value: "other", label: "Other" },
+  { value: "furniture",   label: "Furniture" },
+  { value: "clothing",    label: "Clothing" },
+  { value: "sports",      label: "Sports" },
+  { value: "stationery",  label: "Stationery" },
+  { value: "other",       label: "Other" },
 ];
 
 const CONDITIONS = [

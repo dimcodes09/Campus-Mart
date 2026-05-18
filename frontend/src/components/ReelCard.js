@@ -15,9 +15,9 @@ export default function ReelCard({ product }) {
   const bg = categoryColors[product.category?.toLowerCase()] || categoryColors.default;
 
   return (
-    <div className="relative flex h-screen w-full flex-shrink-0 snap-start items-center justify-center overflow-hidden bg-[#0f0f0f] px-4 py-16">
+    <div className="relative flex h-screen w-full flex-shrink-0 snap-start items-center justify-center overflow-hidden bg-[#0f0f0f] px-4 py-14 sm:py-16">
       <div
-        className="relative aspect-[9/16] w-[calc(100vw-32px)] max-w-[430px] overflow-hidden rounded-2xl bg-black shadow-2xl sm:h-[calc(100vh-96px)] sm:max-h-[860px] sm:w-auto sm:max-w-none"
+        className="relative aspect-[9/16] h-[min(82vh,760px)] max-h-[calc(100vh-112px)] w-auto max-w-[calc(100vw-32px)] overflow-hidden rounded-2xl bg-black shadow-2xl"
       >
         {product.reelVideoUrl ? (
           <video

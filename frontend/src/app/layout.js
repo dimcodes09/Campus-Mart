@@ -2,6 +2,7 @@ import "./globals.css";
 import Navbar from "@/components/Navbar";
 import ChatWidget from "@/components/ChatWidget";
 import SocketChatInbox from "@/components/SocketChatInbox";
+import Footer from "@/components/Footer";
 import { NotificationProvider } from "@/context/NotificationContext";
 import { RealtimeProvider } from "@/context/RealtimeContext";
 
@@ -14,7 +15,6 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <head>
-        {/* Fonts */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="true" />
         <link
@@ -23,19 +23,18 @@ export default function RootLayout({ children }) {
         />
       </head>
 
-      <body className="min-h-screen bg-slate-50">
+      <body className="min-h-screen bg-slate-50 flex flex-col">
         <NotificationProvider>
           <RealtimeProvider>
 
-            {/* Navbar */}
             <Navbar />
 
-            {/* Main Content */}
-            <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
               {children}
             </main>
 
-            {/* Chatbot */}
+            <Footer />
+
             <ChatWidget />
             <SocketChatInbox />
 

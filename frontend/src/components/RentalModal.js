@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import api from "@/services/api";
 import RentalAgreementModal from "./RentalAgreementModal";
+import { PRODUCT_REQUEST_PATH } from "@/constants/productRequest";
 
 const INR = "\u20b9";
 
@@ -19,36 +21,6 @@ function formatDate(value) {
     month: "short",
     year: "numeric",
   }).format(new Date(value));
-}
-
-async function submitProductRequest({ name, email, category, budget }) {
-  try {
-    const response = await fetch("/api/product-alert", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        name,
-        email,
-        category,
-        budget: Number(budget),
-      }),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      console.log(`Product request failed: ${response.status}`, data);
-      return false;
-    }
-
-    console.log("Product request sent successfully", data);
-    return true;
-  } catch (error) {
-    console.log("Error sending product request:", error);
-    return false;
-  }
 }
 
 export default function RentalModal({
@@ -70,19 +42,6 @@ export default function RentalModal({
   const [agreement, setAgreement] = useState(null);
   const [showAgreement, setShowAgreement] = useState(false);
   const [rentalLoading, setRentalLoading] = useState(false);
-  const [isRequestOpen, setIsRequestOpen] = useState(false);
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    category: product?.category || "",
-    budget: product?.price || "",
-  });
-
-  const isRequestSubmitDisabled =
-    !formData.name.trim() ||
-    !formData.email.trim() ||
-    !formData.category.trim() ||
-    !String(formData.budget).trim();
 
   useEffect(() => {
     const originalOverflow = document.body.style.overflow;
@@ -110,25 +69,6 @@ export default function RentalModal({
     } finally {
       setRentalLoading(false);
     }
-  };
-
-  const handleRequestSubmit = async (event) => {
-    event.preventDefault();
-
-    const submitted = await submitProductRequest({
-      name: formData.name,
-      email: formData.email,
-      category: formData.category,
-      budget: formData.budget,
-    });
-
-    if (!submitted) {
-      alert("Request failed. Check n8n test listener.");
-      return;
-    }
-
-    setIsRequestOpen(false);
-    alert("Request submitted!");
   };
 
   const handleAcceptAgreement = async () => {
@@ -249,13 +189,12 @@ export default function RentalModal({
               Cancel
             </button>
 
-            <button
-              type="button"
-              onClick={() => setIsRequestOpen(true)}
-              className="flex-1 rounded-xl border border-indigo-200 px-4 py-3 text-sm font-semibold text-indigo-700 transition-colors hover:bg-indigo-50"
+            <Link
+              href={PRODUCT_REQUEST_PATH}
+              className="flex flex-1 items-center justify-center rounded-xl border border-indigo-200 px-4 py-3 text-sm font-semibold text-indigo-700 transition-colors hover:bg-indigo-50"
             >
               Product Request
-            </button>
+            </Link>
 
             <button
               type="button"
@@ -269,92 +208,6 @@ export default function RentalModal({
         </div>
       </div>
 
-      {isRequestOpen && (
-        <div className="fixed inset-0 z-[120] flex items-center justify-center px-4 py-6">
-          <button
-            type="button"
-            aria-label="Close product request"
-            onClick={() => setIsRequestOpen(false)}
-            className="absolute inset-0 bg-slate-950/60 backdrop-blur-sm"
-          />
-
-          <form
-            onSubmit={handleRequestSubmit}
-            className="relative z-[121] w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl"
-          >
-            <h3 className="text-lg font-bold text-slate-950">Product Request</h3>
-
-            <div className="mt-5 space-y-4">
-              <label className="block text-sm font-semibold text-slate-700">
-                Name
-                <input
-                  type="text"
-                  value={formData.name}
-                  onChange={(event) =>
-                    setFormData({ ...formData, name: event.target.value })
-                  }
-                  className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-300"
-                />
-              </label>
-
-              <label className="block text-sm font-semibold text-slate-700">
-                Email
-                <input
-                  type="email"
-                  value={formData.email}
-                  onChange={(event) =>
-                    setFormData({ ...formData, email: event.target.value })
-                  }
-                  className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-300"
-                />
-              </label>
-
-              <label className="block text-sm font-semibold text-slate-700">
-                Category
-                <input
-                  type="text"
-                  value={formData.category}
-                  onChange={(event) =>
-                    setFormData({ ...formData, category: event.target.value })
-                  }
-                  className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-300"
-                />
-              </label>
-
-              <label className="block text-sm font-semibold text-slate-700">
-                Budget
-                <input
-                  type="number"
-                  min="0"
-                  value={formData.budget}
-                  onChange={(event) =>
-                    setFormData({ ...formData, budget: event.target.value })
-                  }
-                  className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-300"
-                />
-              </label>
-            </div>
-
-            <div className="mt-6 flex gap-3">
-              <button
-                type="button"
-                onClick={() => setIsRequestOpen(false)}
-                className="flex-1 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-50"
-              >
-                Cancel
-              </button>
-
-              <button
-                type="submit"
-                disabled={isRequestSubmitDisabled}
-                className="flex-1 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-indigo-300"
-              >
-                Submit
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
     </>
   );
 }
